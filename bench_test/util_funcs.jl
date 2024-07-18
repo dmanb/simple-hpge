@@ -1,7 +1,11 @@
+############################################################
+# PACKAGES #
+############################################################
+
 Pkg.activate("$(@__DIR__)/../")
 import Pkg
-
 using TypedTables, Dates
+using RadiationDetectorSignals
 using Unitful, Formatting, LaTeXStrings, Measures, Measurements
 using Measurements: value as mvalue, uncertainty as muncertainty
 using Plots, StatsBase, PropDicts
@@ -25,34 +29,82 @@ using LegendDSP: get_fltpars
 using TypedTables, Dates
 using Measurements: value as mvalue, uncertainty as muncertainty
 using LegendDataManagement: readlprops, writelprops
-using RadiationDetectorSignals
+using CSV
+
+############################################################
+############################################################
 
 
+## path = path from your current directory to the folder with the data
+## heading = how many rows to skip before reading data, optional input, default to 3 since that is our format
+function read_csv(relative_path::String; heading = 3)
 
-@__DIR__
-include("$(@__DIR__)/../bench_test/util_funcs.jl")
+    ## creates path to data folder #
+    data_folder = joinpath(@__DIR__, relative_path)
+    # print(isdir(data_folder))
+
+    ## arrays needed for data collection ## 
+    times = Vector{typeof(0.0u"µs":1.0u"µs":1.0u"µs")}()
+    voltages = Vector{Vector{Float64}}()
+    decay_times = Vector{Float64}()
+    wvfarray = ArrayOfRDWaveforms
+
+    ## for each file in the directory with ASIC in the title, it will read the .csv file
+    for file in readdir(data_folder)
+        if occursin("ASIC", file)
+             
+            waveform = RDWaveform[]
 
 
+            path = joinpath(data_folder, file)
+            file = CSV.File(path;header = heading)
+            Table(file)
 
-### give it your path from where you are now
-wvfs, decay_times = read_csv("../../ASIC_data")
+            ## creating time, voltage from .csv file
+            csv_voltage = file["ASIC Voltage (V)"]
+            csv_time = uconvert.(u"µs", (file["Time (s)"] .- file["Time (s)"][1])*u"s")
 
-print(typeof(wvfs))
-print(typeof(decay_times))
+            ## formatting time properly for the RDWaveform object, then appending 
+            timestep = csv_time[2] - csv_time[1]
+            time = 0u"µs":timestep:(length(csv_voltage) - 1)*timestep
+            push!(times, time)
+        
+            ## putting vector of voltages into voltages object
+            push!(voltages, csv_voltage)
+            waveform = RDWAveform(time, csv_voltages)
+            push!(wvfarray, waveform)
+        end
+    end
 
-table = dsp2(wvfs, decay_times)
-print(table)
-path_config = "$(@__DIR__)/../config/dsp_config.json"
-# get DSP configuration data --> Can be modified in .json filepath = " $(@__DIR__)/../config/dsp_config.json"
-dsp_meta = readlprops(path_config)
-config = DSPConfig(dsp_meta.default)
-config.bl_window
-config.tail_window
-###################
-# Main DSP function
-###################
-# function dsp(data::Q, config::LegendDSP.DSPConfig, τ::Quantity{T}, pars_filter::PropDict) where {Q <: Table, T<:Real}
-    # get config parameters
+    ## creates ArrayOfRDWaveforms from times, voltages
+    wvfarray = ArrayOfRDWaveforms((times, voltages))
+
+    ####### GETTING DECAY TIME #########
+    path_config = "$(@__DIR__)/../config/dsp_config.json"
+    # get DSP configuration data --> Can be modified in .json filepath = " $(@__DIR__)/../config/dsp_config.json"
+    dsp_meta = readlprops(path_config)
+    dsp_config = DSPConfig(dsp_meta.default)
+    dsp_config.bl_window
+    dsp_config.tail_window
+    # extract decay times of all waveforms with a simple DSP
+    decay_times = dsp_decay_times(wvfarray, dsp_config)
+
+    ## gives us an array of RDWaveforms, one for each .csv file. Also gives us a vector of decay times, one for each .csv file.
+    return wvfarray, decay_times
+end
+
+waveform = RDWaveform[]
+
+function dsp2(wvfs, decays)
+    ### config stuff
+    path_config = "$(@__DIR__)/../config/dsp_config.json"
+    # get DSP configuration data --> Can be modified in .json filepath = " $(@__DIR__)/../config/dsp_config.json"
+    dsp_meta = readlprops(path_config)
+    config = DSPConfig(dsp_meta.default)
+    config.bl_window
+    config.tail_window
+
+
     bl_window                = config.bl_window
     t0_threshold             = config.t0_threshold
     tail_window              = config.tail_window
@@ -61,19 +113,12 @@ config.tail_window
     current_window           = config.current_window
     qdrift_int_length        = config.qdrift_int_length
     lq_int_length            = config.lq_int_length
-    
-    # get default filter parameters
+
+    #### all filter parameters set to default since we do not have access to full library 
     trap_rt, trap_ft = get_fltpars(PropDict(),:trap, config)
     cusp_rt, cusp_ft = get_fltpars(PropDict(), :cusp, config)
     zac_rt, zac_ft = get_fltpars(PropDict(), :zac, config)
     sg_wl   = get_fltpars(PropDict(), :sg, config)
-
-    # get waveform data 
-    # wvfs = data.waveform
-    # blfc = data.baseline
-    # ts   = data.timestamp
-    # evID = data.eventnumber
-    # efc  = data.daqenergy
 
     # get CUSP and ZAC filter length and flt scale
     flt_length_zac              = config.flt_length_zac
@@ -90,107 +135,106 @@ config.tail_window
     τ_cusp = 10000000.0u"µs"
     τ_zac = 10000000.0u"µs"
 
-    # get baseline mean, std and slope
+
+    ################## ACTUAL WAVEFORM FILTERING AND RECONSTRUCTION, ANALYSIS BEGINS HERE ##################
     bl_stats = signalstats.(wvfs, leftendpoint(bl_window), rightendpoint(bl_window))
- 
-    pars_db.pz.tau
-    
+
     # substract baseline from waveforms
     wvfs = shift_waveform.(wvfs, -bl_stats.mean)
     
     # get wvf maximum
     wvf_max = maximum.(wvfs.signal)
     wvf_min = minimum.(wvfs.signal)
-
+    
     # extract decay times
     tail_stats = tailstats.(wvfs, leftendpoint(tail_window), rightendpoint(tail_window))
-
+    
     # deconvolute waveform 
     # --> wvfs = wvfs_pz
-    deconv_flt = InvCRFilter(decay_times[1])
+    deconv_flt = InvCRFilter(decays[1])
     wvfs = deconv_flt.(wvfs)
-
+    
     # get tail mean, std and slope
     pz_stats = signalstats.(wvfs, leftendpoint(tail_window), rightendpoint(tail_window))
-
+    
     # t0 determination
     t0 = get_t0(wvfs, t0_threshold; flt_pars=config.kwargs_pars.t0_flt_pars, mintot=config.kwargs_pars.t0_mintot)
-
+    
     # if all waveforms are saturated set threshold to 1.0 to avoid numerical problems
     # replace!(wvf_max, zero(wvf_max[1]) => one(wvf_max[1]))
-
+    
     # get threshold points in rise
     t10 = get_threshold(wvfs, wvf_max .* 0.1; mintot=config.kwargs_pars.tx_mintot)
     t50 = get_threshold(wvfs, wvf_max .* 0.5; mintot=config.kwargs_pars.tx_mintot)
     t80 = get_threshold(wvfs, wvf_max .* 0.8; mintot=config.kwargs_pars.tx_mintot)
     t90 = get_threshold(wvfs, wvf_max .* 0.9; mintot=config.kwargs_pars.tx_mintot)
     t99 = get_threshold(wvfs, wvf_max .* 0.99; mintot=config.kwargs_pars.tx_mintot)
-    
+        
     drift_time = uconvert.(u"ns", t90 - t0)
-
+    
     # get Q-drift parameter
     qdrift = get_qdrift(wvfs, t0, qdrift_int_length; pol_power=config.kwargs_pars.int_interpolation_order, sign_est_length=config.kwargs_pars.int_interpolation_length)
-
+    
     # get LQ parameter
     lq  = get_qdrift(wvfs, t80, lq_int_length; pol_power=config.kwargs_pars.int_interpolation_order, sign_est_length=config.kwargs_pars.int_interpolation_length)
-
+    
     # robust energy reconstruction with long, middle and short rise and flat-top times
     uflt_10410 = TrapezoidalChargeFilter(10u"µs", 4u"µs")
     e_10410  = maximum.((uflt_10410.(wvfs)).signal)
 
     uflt_535 = TrapezoidalChargeFilter(5u"µs", 3u"µs")
     e_535  = maximum.((uflt_535.(wvfs)).signal)
-
+    
     uflt_313 = TrapezoidalChargeFilter(3u"µs", 1u"µs")
     e_313  = maximum.((uflt_313.(wvfs)).signal)
-
+    
     # signal estimator for precise energy reconstruction
     signal_estimator = SignalEstimator(PolynomialDNI(config.kwargs_pars.sig_interpolation_order, config.kwargs_pars.sig_interpolation_length))
-
+    
     # get trap energy of optimized rise and flat-top time
     uflt_trap_rtft = TrapezoidalChargeFilter(trap_rt, trap_ft)
-
+    
     e_trap = signal_estimator.(uflt_trap_rtft.(wvfs), t50 .+ (trap_rt + trap_ft/2))
-
+    
     # get cusp energy of optimized rise and flat-top time
     uflt_cusp_rtft = CUSPChargeFilter(cusp_rt, cusp_ft, τ_cusp, flt_length_cusp, cusp_scale)
-
+    
     e_cusp = signal_estimator.(uflt_cusp_rtft.(wvfs), t50 .+ (flt_length_cusp /2))
-
+    
     # get zac energy of optimized rise and flat-top time
     uflt_zac_rtft = ZACChargeFilter(zac_rt, zac_ft, τ_zac, flt_length_zac, zac_scale)
-
+    
     e_zac = signal_estimator.(uflt_zac_rtft.(wvfs), t50 .+ (flt_length_zac /2))
-
+    
     # extract current with optimal SG filter length with second order polynominal and first derivative
     wvfs_sgflt_deriv = SavitzkyGolayFilter(sg_wl, sg_flt_degree, 1).(wvfs)
     a_sg = get_wvf_maximum.(wvfs_sgflt_deriv, leftendpoint(current_window), rightendpoint(current_window))
-
+    
     a_60 = get_wvf_maximum.(SavitzkyGolayFilter(60u"ns", sg_flt_degree, 1).(wvfs), leftendpoint(current_window), rightendpoint(current_window))
     a_100 = get_wvf_maximum.(SavitzkyGolayFilter(100u"ns", sg_flt_degree, 1).(wvfs), leftendpoint(current_window), rightendpoint(current_window))
     a_raw = get_wvf_maximum.(DifferentiatorFilter(1).(wvfs), leftendpoint(current_window), rightendpoint(current_window))
-
+    
     # get in-trace pile-up
     inTrace_pileUp = get_intracePileUp(wvfs_sgflt_deriv, inTraceCut_std_threshold, bl_window; mintot=config.kwargs_pars.intrace_mintot)
-    
+        
     # get position of current rise
     thres = maximum.(wvfs_sgflt_deriv.signal) .* 0.5
     # replace!(thres, zero(thres[1]) => one(thres[1]))
-
+    
     t50_current = get_threshold(wvfs_sgflt_deriv, thres; mintot=config.kwargs_pars.tx_mintot)
-
+    
     # invert waveform for DC tagging
     # wvfs --> wvfs_pz_inv
     wvfs = multiply_waveform.(wvfs, -1.0)
-
+    
     # get inverted waveform maximum for long and short filter
     e_10410_max_inv  = maximum.(uflt_10410.(wvfs).signal)
-
+    
     e_313_max_inv  = maximum.(uflt_313.(wvfs).signal)
-
+    
     # t0 determination
     t0_inv = get_t0(wvfs, t0_threshold; mintot=config.kwargs_pars.t0_mintot)
-
+    
     # output Table 
     return TypedTables.Table(blmean = bl_stats.mean, blsigma = bl_stats.sigma, blslope = bl_stats.slope, bloffset = bl_stats.offset, 
         tailmean = pz_stats.mean, tailsigma = pz_stats.sigma, tailslope = pz_stats.slope, tailoffset = pz_stats.offset,
@@ -205,5 +249,9 @@ config.tail_window
         e_trap = e_trap, e_cusp = e_cusp, e_zac = e_zac, 
         qdrift = qdrift, lq = lq,
         a_sg = a_sg, a_60 = a_60, a_100 = a_100, a_raw = a_raw,
-    )
-# end
+        )
+end 
+
+
+
+

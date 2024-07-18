@@ -14,43 +14,13 @@ using Plots
 using CSV
 using RadiationDetectorSignals
 
+@__DIR__
+include("$(@__DIR__)/util_funcs.jl")
 
 
-## 
-println(@__DIR__)
-data_folder = "$(@__DIR__)/../../ASIC_data/"
-@info data_folder
+wvfs, decays = read_csv("../../ASIC_data")
 
 
-## initializing objects needed for construction of RDWaveform and ArrayOfRDWaveforms, as well as list of decay times
-times = Vector{typeof(0.0u"µs":1.0u"µs":1.0u"µs")}()
-voltages = Vector{Vector{Float64}}()
-decay_times = Vector{Float64}()
-
-for file in readdir(data_folder)
-
-    if occursin("ASIC", file)
-        path = joinpath(data_folder, file)
-        file = CSV.File(path;header = 3)
-        Table(file)
-
-        ## creating time, voltage from .csv file
-         csv_voltage = file["ASIC Voltage (V)"]
-         csv_time = uconvert.(u"µs", (file["Time (s)"] .- file["Time (s)"][1])*u"s")
-
-        ## formatting time properly for the RDWaveform object, then appending 
-        timestep = csv_time[2] - csv_time[1]
-        time = 0u"µs":timestep:(length(csv_voltage) - 1)*timestep
-        push!(times, time)
-        
-        ## putting vector of voltages into voltages object
-        push!(voltages, csv_voltage)
-    end
-end
-
-
-
-wvfarray = ArrayOfRDWaveforms((times, voltages))
 
 path_config = "$(@__DIR__)/../config/dsp_config.json"
 # get DSP configuration data --> Can be modified in .json filepath = " $(@__DIR__)/../config/dsp_config.json"
