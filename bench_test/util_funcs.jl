@@ -41,61 +41,60 @@ function read_csv(relative_path::String; heading = 3)
 
     ## creates path to data folder #
     data_folder = joinpath(@__DIR__, relative_path)
-    # print(isdir(data_folder))
+    print(isdir(data_folder))
 
-    ## arrays needed for data collection ## 
+    # arrays needed for data collection ## 
     times = Vector{typeof(0.0u"µs":1.0u"µs":1.0u"µs")}()
     voltages = Vector{Vector{Float64}}()
-    decay_times = Vector{Float64}()
     wvfarray = ArrayOfRDWaveforms
 
     ## for each file in the directory with ASIC in the title, it will read the .csv file
     for file in readdir(data_folder)
         if occursin("ASIC", file)
              
-            waveform = RDWaveform[]
-
-
             path = joinpath(data_folder, file)
             file = CSV.File(path;header = heading)
             Table(file)
 
             ## creating time, voltage from .csv file
-            csv_voltage = file["ASIC Voltage (V)"]
+            csv_voltages = file["ASIC Voltage (V)"]
             csv_time = uconvert.(u"µs", (file["Time (s)"] .- file["Time (s)"][1])*u"s")
 
             ## formatting time properly for the RDWaveform object, then appending 
             timestep = csv_time[2] - csv_time[1]
-            time = 0u"µs":timestep:(length(csv_voltage) - 1)*timestep
+            time = 0u"µs":timestep:(length(csv_voltages) - 1)*timestep
             push!(times, time)
         
             ## putting vector of voltages into voltages object
-            push!(voltages, csv_voltage)
-            waveform = RDWAveform(time, csv_voltages)
-            push!(wvfarray, waveform)
+            push!(voltages, csv_voltages)
         end
     end
-
-    ## creates ArrayOfRDWaveforms from times, voltages
     wvfarray = ArrayOfRDWaveforms((times, voltages))
 
-    ####### GETTING DECAY TIME #########
+    ## gives us an array of RDWaveforms, one for each .csv file. 
+    return wvfarray
+end
+
+
+## modify the path as required for location of config file
+function get_decay_times(wvfs)
     path_config = "$(@__DIR__)/../config/dsp_config.json"
     # get DSP configuration data --> Can be modified in .json filepath = " $(@__DIR__)/../config/dsp_config.json"
     dsp_meta = readlprops(path_config)
     dsp_config = DSPConfig(dsp_meta.default)
     dsp_config.bl_window
-    dsp_config.tail_window
-    # extract decay times of all waveforms with a simple DSP
-    decay_times = dsp_decay_times(wvfarray, dsp_config)
+    dsp_config.tail_window  
 
-    ## gives us an array of RDWaveforms, one for each .csv file. Also gives us a vector of decay times, one for each .csv file.
-    return wvfarray, decay_times
+    ## extract decay times of all waveforms with a simple DSP
+    decay_times = Vector{Float64}()
+    decay_times = dsp_decay_times(wvfs, dsp_config)
+    return decay_times
 end
 
-waveform = RDWaveform[]
 
-function dsp2(wvfs, decays)
+
+
+function simple_dsp(wvfs, decays)
     ### config stuff
     path_config = "$(@__DIR__)/../config/dsp_config.json"
     # get DSP configuration data --> Can be modified in .json filepath = " $(@__DIR__)/../config/dsp_config.json"

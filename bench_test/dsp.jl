@@ -35,10 +35,20 @@ include("$(@__DIR__)/../bench_test/util_funcs.jl")
 
 
 ### give it your path from where you are now
-wvfs, decay_times = read_csv("../../ASIC_data")
+wvfs = read_csv("../../ASIC_data")
 
+wvfs 
 print(typeof(wvfs))
-print(typeof(decay_times))
+ 
+print(wvfs.time)
+
+path_config = "$(@__DIR__)/../config/dsp_config.json"
+# get DSP configuration data --> Can be modified in .json filepath = " $(@__DIR__)/../config/dsp_config.json"
+dsp_meta = readlprops(path_config)
+dsp_config = DSPConfig(dsp_meta.default)
+dsp_config.bl_window
+dsp_config.tail_window
+decay_times = dsp_decay_times(wvfs, dsp_config)
 
 table = dsp2(wvfs, decay_times)
 print(table)

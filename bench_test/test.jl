@@ -28,31 +28,22 @@ using LegendDataManagement: readlprops, writelprops
 using CSV
 
 
-times = Vector{Vector{typeof(0.0u"µs":1.0u"µs":1.0u"µs")}}()
-voltages = Vector{Vector{Float64}}()
-decay_times = Vector{Float64}()
-wvfarray = ArrayOfRDWaveforms
+#### including the util_funcs.jl file 
+include("$(@__DIR__)/../bench_test/util_funcs.jl")
 
-@__DIR__
-path = "$(@__DIR__)/../../ASIC_data/ASIC_test_4p500V.csv"
-file = CSV.File(path; header = 3)
-Table(file)
 
-csv_voltage = file["ASIC Voltage (V)"]
-csv_time = uconvert.(u"µs", (file["Time (s)"] .- file["Time (s)"][1])*u"s")
-csv_pulser_voltage = file["Pulser Voltage (V)"]
-## formatting time properly for the RDWaveform object, then appending 
-timestep = csv_time[2] - csv_time[1]
-time = 0u"µs":timestep:(length(csv_voltage) - 1)*timestep
+### give it your path from where you are now
+rel_path = "../../ASIC_data"
 
-waveform = RDWaveform(time, csv_voltage)
-waveform
 
-push!(voltages, csv_voltage)
-push!(times, time)
-wvfsarray = ArrayOfRDWaveforms
+### assign the return values of the read_csv function to the variables wvfs and decays
+wvfs = read_csv(rel_path)
+wvfs
+print(typeof(wvfs))
 
-push!(wvfsarray, waveform)
+### get decay times from wvfs from csv files 
+decay_times = get_decay_times(wvfs)
 
-plot(time, csv_voltage, label = "ASIC & Pulser Voltage vs. Time", xlabel = "Time", ylabel = "Voltage (V)", title = "ASIC & Pulser Voltage vs. Time", legend=:right)
-plot!(time, csv_pulser_voltage, label = "Pulser Voltage vs. Time")
+### getting information on waveforms from simple_dsp function 
+table = simple_dsp(wvfs, decay_times)
+
