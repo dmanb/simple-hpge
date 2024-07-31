@@ -37,11 +37,11 @@ using CSV
 
 ## path = path from your current directory to the folder with the data
 ## heading = how many rows to skip before reading data, optional input, default to 3 since that is our format
-function read_csv(relative_path::String; heading = 3)
+function read_folder(relative_path::String; heading = 1)
 
     ## creates path to data folder #
     data_folder = joinpath(@__DIR__, relative_path)
-    print(isdir(data_folder))
+    # print(isdir(data_folder))
 
     # arrays needed for data collection ## 
     times = Vector{typeof(0.0u"µs":1.0u"µs":1.0u"µs")}()
@@ -53,25 +53,26 @@ function read_csv(relative_path::String; heading = 3)
         if occursin("ASIC", file)
              
             path = joinpath(data_folder, file)
-            file = CSV.File(path;header = heading)
-            Table(file)
+            df = CSV.read(path, DataFrame; delim=',', header = 2)
+            # Table(file)
+            # println("Column names: ", names(df))
 
-            ## creating time, voltage from .csv file
-            csv_voltages = file["ASIC Voltage (V)"]
-            csv_time = uconvert.(u"µs", (file["Time (s)"] .- file["Time (s)"][1])*u"s")
+            # creating time, voltage from .csv file
+            asic_voltages = df[:, "ASIC Voltage (V)"]
+            csv_time = uconvert.(u"µs", (df[:, "Time (s)"] .- df[1, "Time (s)"])*u"s")
 
             ## formatting time properly for the RDWaveform object, then appending 
             timestep = csv_time[2] - csv_time[1]
-            time = 0u"µs":timestep:(length(csv_voltages) - 1)*timestep
+            time = 0u"µs":timestep:(length(asic_voltages) - 1)*timestep
             push!(times, time)
         
-            ## putting vector of voltages into voltages object
-            push!(voltages, csv_voltages)
+            # putting vector of voltages into voltages object
+            push!(voltages, asic_voltages)
         end
     end
     wvfarray = ArrayOfRDWaveforms((times, voltages))
 
-    ## gives us an array of RDWaveforms, one for each .csv file. 
+    # gives us an array of RDWaveforms, one for each .csv file. 
     return wvfarray
 end
 
@@ -116,8 +117,8 @@ function simple_dsp(wvfs, decays)
     #### all filter parameters set to default since we do not have access to full library 
     trap_rt, trap_ft = get_fltpars(PropDict(),:trap, config)
     cusp_rt, cusp_ft = get_fltpars(PropDict(), :cusp, config)
-    zac_rt, zac_ft = get_fltpars(PropDict(), :zac, config)
-    sg_wl   = get_fltpars(PropDict(), :sg, config)
+    zac_rt, zac_ft   = get_fltpars(PropDict(), :zac, config)
+    sg_wl            = get_fltpars(PropDict(), :sg, config)
 
     # get CUSP and ZAC filter length and flt scale
     flt_length_zac              = config.flt_length_zac

@@ -1,15 +1,15 @@
 {   
     "default": {
         "enc_pickoff_trap": {
-            "val": 30.0,
+            "val": 18.0,
             "unit": "µs"
         },
         "enc_pickoff_zac": {
-            "val": 30.0,
+            "val": 18.0,
             "unit": "µs"
         }, 
         "enc_pickoff_cusp": {
-            "val": 30.0,
+            "val": 18.0,
             "unit": "µs"
         }, 
         "flt_length_cusp": {
@@ -26,27 +26,27 @@
                 "unit": "µs"
             }, 
             "max": {
-                "val": 31.0,
+                "val": 15.0,
                 "unit": "µs"
             }
         },
         "tail_window": {
             "min": {
-                "val": 70.0,
+                "val": 30.0,
                 "unit": "µs"
             }, 
             "max": {
-                "val": 110.0,
+                "val": 200.0,
                 "unit": "µs"
             }
         },
         "current_window": {
             "min": {
-                "val": 30.0,
+                "val": 18.0,
                 "unit": "µs"
             }, 
             "max": {
-                "val": 125.0,
+                "val": 200.0,
                 "unit": "µs"
             }
         },
@@ -59,7 +59,7 @@
             "unit": "µs"
         },        
 
-        "t0_threshold": 4.0,
+        "t0_threshold": 0.001,
         "inTraceCut_std_threshold": 5,
         "sg_flt_degree": 3,
         
@@ -70,7 +70,7 @@
                     "unit": "µs"
                 },
                 "stop": {
-                    "val": 13.0,
+                    "val": 8.0,
                     "unit": "µs"
                 },
                 "step": {
@@ -326,11 +326,11 @@
     "pz": {
         "default": {
             "min_tau": {
-                "val" : 50.0,
+                "val" : 10.0,
                 "unit" : "µs"
             },
             "max_tau": {
-                "val": 250.0,
+                "val": 400.0,
                 "unit": "µs"
             },
             "nbins": 1000,

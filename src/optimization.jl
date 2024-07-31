@@ -10,39 +10,41 @@ using RadiationDetectorDSP
 using LegendDataManagement: readlprops, writelprops
 
 
-# enable debug
-ENV["JULIA_DEBUG"] = "Main,LegendSpecFits,LegendDSP" 
+# # enable debug
+# ENV["JULIA_DEBUG"] = "Main,LegendSpecFits,LegendDSP" 
 
 
-# You can decide here on the plotting backend
-# for interactive plotting use plotljyjs, for static plots use gr
-plotlyjs(size=(700, 500))
-# gr(size=(700, 500))
+# # You can decide here on the plotting backend
+# # for interactive plotting use plotljyjs, for static plots use gr
+# plotlyjs(size=(700, 500))
+# # gr(size=(700, 500))
 
-# read datafolder and run name from global config
-data_pd = readprops("data_config.json")
+# # read datafolder and run name from global config
+# data_pd = readprops("data_config.json")
 
-datafolder = data_pd.datafolder
-raw_folder = joinpath(datafolder, data_pd.run, "raw")
-config_folder = data_pd.configfolder
-figures_folder = mkpath(joinpath(data_pd.figurefolder, data_pd.run))
-# get pars
-pars_folder = mkpath(joinpath(data_pd.parsfolder, data_pd.run))
-pars_file = joinpath(pars_folder, "pars_optimization.json")
-pars_db = 
-    if isfile(pars_file)
-        readlprops(pars_file)
-    else
-        PropDict()
-    end
+# datafolder = data_pd.datafolder
+# raw_folder = joinpath(datafolder, data_pd.run, "raw")
+# config_folder = data_pd.configfolder
+# figures_folder = mkpath(joinpath(data_pd.figurefolder, data_pd.run))
+# # get pars
+# pars_folder = mkpath(joinpath(data_pd.parsfolder, data_pd.run))
+# pars_file = joinpath(pars_folder, "pars_optimization.json")
+# pars_db = 
+#     if isfile(pars_file)
+#         readlprops(pars_file)
+#     else
+#         PropDict()
+#     end
 
-# get decay time
-tau = mvalue(pars_db.pz.τ)
+# # get decay time
+# tau = mvalue(pars_db.pz.τ)
 
-# get peak files
-peaks_folder = joinpath(datafolder, data_pd.run, "peaks")
+# # get peak files
+# peaks_folder = joinpath(datafolder, data_pd.run, "peaks")
 
-peaks_file = joinpath(peaks_folder, only(readdir(peaks_folder)))
+# peaks_file = joinpath(peaks_folder, only(readdir(peaks_folder)))
+
+##########################################
 
 # open peaks file to load waveforms from specfic peaks
 wvfs_fep = lh5open(peaks_file, "r")["Tl208FEP"].waveform[:]
