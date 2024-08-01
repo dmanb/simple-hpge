@@ -1,5 +1,20 @@
 #### FUNCTIONS FOR DATA COLLECTION ####
 
+import sys, os
+#exec(open("./simple-hpge/oscilloscope_DAQ/automation_funcs.py").read()) ### annoying workaround to include autmation_funcs.py
+#from automation_funcs import *
+import pyvisa
+import csv
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import time
+import struct 
+import os
+import datetime
+
+# def addition(a, b):
+#     return a + b
 
 ## configures power supply to desired format
 def configure_power_supply():
@@ -61,7 +76,7 @@ def set_trigger(trigger_level):
     scope.write('TRIGger:A:EDGE:SOURce CH4') ## makes sure the trigger is set to channel 4
         
     # Construct the SCPI command to set the trigger level
-    scope.write(f'TRIGger:A:LEVel:CH4 {trigger_level}') ## set trigger as low as possible to get a good signal
+    scope.write(f'TRIGger:A:LEVel:CH4 {trigger_level}') 
 
 #############################################################################
 
@@ -99,7 +114,6 @@ def get_waveform_data(channel):
 
 
 def adjust_y_divisions(asic_amplitude):
-
     ## takes in amplitude of the ASIC (a float) and adjusts y divisions of oscilloscope as required
     if 1.6 < asic_amplitude <= 4:
         set_trigger(0.1)
@@ -138,8 +152,7 @@ def adjust_y_divisions(asic_amplitude):
 
 ## saves ASIC time data, voltage data, pulser voltage data to .csv file as well as other parameters
 def save_to_csv(path, time_data, device_voltage_data, pulser_voltage_data, pulser_voltage, asic_voltage, counter = None):
-    
-    filename = f'ASIC_A{asic_voltage:.3f}V_P{pulser_voltage:.3f}V_{counter:03d}.csv'.replace('.','p',2)  
+    filename = f'ASIC_A{asic_voltage:.3f}V_P{pulser_voltage:.3f}V_{counter:04d}.csv'.replace('.','p',2)  
     fullpath = os.path.join(path, filename)
     
     with open(fullpath, 'w', newline='') as csvfile:
@@ -214,7 +227,7 @@ def plot_pulser_waveform(filename):
 ## creates folder for .csv files to be inserted into. The folder is automatically created in this directory
 ## in the folder I have called ./Data.
 ## GIVE THE FOLDER A NAME IN THE get_data FUNCTIONS BELOW
-def create_folder(base_dir='../../ASIC_data', name = None, run_type = None, n_runs = None, subfolder = None):
+def create_folder(base_dir='../ASIC_data', name = None, run_type = None, n_runs = None, subfolder = None):
     # If a subfolder is specified, use it directly without generating a new folder name
     if subfolder:
         folder_path = os.path.join(base_dir, subfolder)
@@ -255,10 +268,11 @@ def create_folder(base_dir='../../ASIC_data', name = None, run_type = None, n_ru
 
 ### MAIN FUNCTION FOR DATA COLLECTION, FUNCTIONS BELOW FOR MORE SPECIFIC / SPECIALIZED DATA COLLECTION
 
-def collect_data(voltage_array, num_runs, folder_title = None):
+def collect_data(voltage_array, num_runs, folder_title = None, base_directory = '../ASIC_data'):
     ## create folder title for this run with given title, type of run in this case iterates over an array 
     ## at each voltage multiple times. 
-    folder_path = create_folder(name = folder_title, 
+    folder_path = create_folder(base_dir = base_directory,
+                                name = folder_title, 
                                 run_type = f'Array of voltages, each iterated over', 
                                 n_runs = num_runs)
     
@@ -270,7 +284,7 @@ def collect_data(voltage_array, num_runs, folder_title = None):
         
         counter = 0      ## to save multiple files at same voltage
         pulser_v(volt)   ## sets the voltage on the pulser
-        time.sleep(1)    ## adds delay for waveform to stabilize before data collection
+        time.sleep(.25)   ## adds delay for waveform to stabilize before data collection
         
         
         asic_amplitude = get_measurement(3) ## gets ASIC max amplitude so we can adjust scaling
@@ -279,10 +293,10 @@ def collect_data(voltage_array, num_runs, folder_title = None):
         
         ## collects n waveforms at each voltage
         for n in range(num_runs):
-            time.sleep(.1)
+            time.sleep(.001)
             time_wave, voltage_wave               = get_waveform_data(1) ## gets ASIC waveform data out of channel 1
             time_wave_pulser, voltage_wave_pulser = get_waveform_data(4) ## gets pulser voltages 
-            # save_to_csv(subfolder_path, time_wave, voltage_wave, voltage_wave_pulser, volt, asic_amplitude, counter)
+            save_to_csv(subfolder_path, time_wave, voltage_wave, voltage_wave_pulser, volt, asic_amplitude, counter)
             counter += 1
     
     
@@ -326,4 +340,11 @@ def initialize_scope_and_pulser():
     ## SET ACQUISITION MODE TO HIGH RESOLUTION
     scope.write(':ACQ:MODE HIRES')
 
-## Run the configuration function for power supply
+#############################################################################
+
+
+def close_device_connections():
+    scope.close()
+    pulser.close()
+    supply.close()
+    # print('Connections closed')
