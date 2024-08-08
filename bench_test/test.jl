@@ -32,31 +32,57 @@ using CSV
 #### including the util_funcs.jl file 
 include("$(@__DIR__)/../bench_test/util_funcs.jl")
 
+## print your current directory to help you understand what the path is to the data
+print(@__DIR__)
 
-### give it your path from where you are now
-rel_path = "../../ASIC_data_folder/ASIC_data_test_Jul24"
+## use read_data_folder function to get all waveforms from data folder
+## read_data_folder has an optional parameter for the heading of the .csv files, it is defaulted to 2 
+wvfs_dict = read_data_folder("../ASIC_data/ASIC_SampleData_08022024")
+
+## print the keys in the dictionary
+ println("Available keys in wvfs_dict: ", keys(wvfs_dict))
+
+## get the waveforms from the dictionary
+wvfs = wvfs_dict["ASIC_PulserVoltage_4p000V"]
 
 
-### assign the return values of the read_csv function to the variables wvfs and decays
-wvfs = read_folder(rel_path)
-wvfs
-print(typeof(wvfs))
 
-wvf1 = wvfs[5]
-plot(wvf1)
-
+## pick the first waveform and plot it (might take a second)
+wvf1 = wvfs[1:10]
 plotlyjs()
 plot(wvf1)
 
+
+
 ### get decay times from wvfs from csv files 
 decay_times = get_decay_times(wvfs)
+
+
+## test pole zero correction (which occurs already in the simple_dsp function, but can be done separately)
+deconv_flt = InvCRFilter(decay_times[5])
+
+## pz_wavs = pole zero corrected waveforms
+pz_wavs = deconv_flt.(wvfs)
+
+## plotting the fifth waveform before and after pole zero correction
+plot(pz_wavs[5], label="After Pole Zero Correction",ylabel = "Volts (V)")
+plot!(wvfs[5], label="Before Pole Zero Correction", ylabel = "Volts (V)")
+plot!(legend =:right)
+display(plot)
+
+
 
 ### getting information on waveforms from simple_dsp function 
 table = simple_dsp(wvfs, decay_times)
 
 
 
-# columnnames(table)
+
+columnnames(table)
+
+trap = table.e_trap
+
+
 
 ## getting median decay time from data set for usage in the dsp_trap_rt_optimization function
 taus = median(table.tail_τ)

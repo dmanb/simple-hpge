@@ -37,7 +37,60 @@ using CSV
 
 ## path = path from your current directory to the folder with the data
 ## heading = how many rows to skip before reading data, optional input, default to 3 since that is our format
-function read_folder(relative_path::String; heading = 1)
+
+function read_data_folder(relative_dir::String; heading = 2)
+
+    ## Create path to data folder 
+    data_folder = joinpath(@__DIR__, relative_dir)
+
+    ## Dictionary to store ArrayOfRDWaveforms for each subfolder
+    wvfs_dict = Dict{String, ArrayOfRDWaveforms}()
+
+
+    ## Helper function to process the subdirectories
+    function process_subdirectory(sub_dir)
+        times = Vector{typeof(0.0u"µs":1.0u"µs":1.0u"µs")}()
+        voltages = Vector{Vector{Float64}}()
+
+        for file in readdir(sub_dir)
+            if occursin("ASIC", file)
+                path = joinpath(sub_dir, file)
+                df = CSV.read(path, DataFrame; delim=',', header = heading)
+
+                ## Creating time and voltages from the .csv files 
+                asic_voltages = df[:, "ASIC Voltage (V)"]
+                csv_time = uconvert.(u"µs", (df[:, "Time (s)"] .- df[1, "Time (s)"])*u"s")
+
+
+                ## Formatting time properly for the RDWaveform object, then appending
+                timestep = csv_time[2] - csv_time[1]
+                time = 0u"µs":timestep:(length(asic_voltages) - 1)*timestep
+                push!(times, time)
+
+                ## Putting vector of voltages into voltages object
+                push!(voltages, asic_voltages)
+            end
+        end
+
+        ## Create waveform object 
+        wvfs_dict[basename(sub_dir)] = ArrayOfRDWaveforms((times, voltages))
+    end
+
+    for sub_dir in readdir(data_folder, join=true)
+        if isdir(sub_dir)
+            process_subdirectory(sub_dir)
+        end
+    end
+
+    return wvfs_dict
+end
+
+
+
+
+
+
+function read_folder(relative_path::String; heading = 2)
 
     ## creates path to data folder #
     data_folder = joinpath(@__DIR__, relative_path)
@@ -53,7 +106,7 @@ function read_folder(relative_path::String; heading = 1)
         if occursin("ASIC", file)
              
             path = joinpath(data_folder, file)
-            df = CSV.read(path, DataFrame; delim=',', header = 2)
+            df = CSV.read(path, DataFrame; delim=',', header = heading)
             # Table(file)
             # println("Column names: ", names(df))
 
@@ -84,7 +137,7 @@ function get_decay_times(wvfs)
     dsp_meta = readlprops(path_config)
     dsp_config = DSPConfig(dsp_meta.default)
     dsp_config.bl_window
-    dsp_config.tail_window  
+    dsp_config.tail_window   
 
     ## extract decay times of all waveforms with a simple DSP
     decay_times = Vector{Float64}()

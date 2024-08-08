@@ -1,0 +1,5 @@
+Oscilloscope: TEKTRONIX MSO44B,Pulser: TELEDYNE T3AFG500
+Date: 2024-08-02,Time: 16:43:54
+Time units: microseconds,Voltage units: Volts
+"Run type: Array of voltages, each iterated over"
+# of iterations at each voltage: 50

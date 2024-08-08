@@ -26,17 +26,17 @@
                 "unit": "µs"
             }, 
             "max": {
-                "val": 15.0,
+                "val": 190.0,
                 "unit": "µs"
             }
         },
         "tail_window": {
             "min": {
-                "val": 30.0,
+                "val": 225.0,
                 "unit": "µs"
             }, 
             "max": {
-                "val": 200.0,
+                "val": 550.0,
                 "unit": "µs"
             }
         },
@@ -59,7 +59,7 @@
             "unit": "µs"
         },        
 
-        "t0_threshold": 0.001,
+        "t0_threshold": 0.05, 
         "inTraceCut_std_threshold": 5,
         "sg_flt_degree": 3,
         
@@ -176,7 +176,7 @@
             "trap":
                 {
                     "rt": {
-                        "val": 5.0,
+                        "val": 3.5,
                         "unit": "µs"
                     },
                     "ft": {
@@ -326,11 +326,11 @@
     "pz": {
         "default": {
             "min_tau": {
-                "val" : 10.0,
+                "val" : 210.0,
                 "unit" : "µs"
             },
             "max_tau": {
-                "val": 400.0,
+                "val": 550.0,
                 "unit": "µs"
             },
             "nbins": 1000,
