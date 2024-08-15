@@ -35,6 +35,8 @@ docs/site/
 # environment.
 # Manifest.toml
 
-
 # Ignore ASIC_data folder
-ASIC_data/
+ASIC_data/*
+
+# OS generated files
+**/.DS_Store
