@@ -36,30 +36,34 @@ include("$(@__DIR__)/../bench_test/util_funcs.jl")
 print(@__DIR__)
 
 ## use read_data_folder function to get all waveforms from data folder
-## read_data_folder has an optional parameter for the heading of the .csv files, it is defaulted to 2 
-wvfs_dict = read_data_folder("../ASIC_data/ASIC_SampleData_08022024")
+## read_data_folder function is defined in util_funcs.jl
+wvfs_dict = read_data_folder("../ASIC_data/ASIC_BenchTest_08082024/")
 
 ## print the keys in the dictionary
- println("Available keys in wvfs_dict: ", keys(wvfs_dict))
+println("Available keys in wvfs_dict: ", keys(wvfs_dict))
 
 ## get the waveforms from the dictionary
-wvfs = wvfs_dict["ASIC_PulserVoltage_4p000V"]
+wvfs = wvfs_dict["ASIC_PulserVoltage_4p500V"]
 
 
 
 ## pick the first waveform and plot it (might take a second)
 wvf1 = wvfs[1:10]
 plotlyjs()
-plot(wvf1)
-
-
+plot(wvf1, ylabel = "Volts (V)")
+plot(wvfs[1], ylabel = "Volts (V)", label = "ASIC Waveform")
 
 ### get decay times from wvfs from csv files 
 decay_times = get_decay_times(wvfs)
 
 
+
+## code to get rid of last waveform in wvfs, since it was returning an error
+## pop!(wvfs)
+
+
 ## test pole zero correction (which occurs already in the simple_dsp function, but can be done separately)
-deconv_flt = InvCRFilter(decay_times[5])
+deconv_flt = InvCRFilter(decay_times[1])
 
 ## pz_wavs = pole zero corrected waveforms
 pz_wavs = deconv_flt.(wvfs)
@@ -77,9 +81,10 @@ table = simple_dsp(wvfs, decay_times)
 
 
 
+## getting column names of the table to see what information is available
+# columnnames(table)
 
-columnnames(table)
-
+## parameter values for the trap filter gotten from simple_dsp table
 trap = table.e_trap
 
 
@@ -107,11 +112,6 @@ for i in 1:length(dsp_config.e_grid_rt_trap)
     push!(ENC, std(enc_i))
 end 
 
-
-
-
+## creates ENC noise vs. shaping time graph
 plot(ustrip.(collect(dsp_config.e_grid_rt_trap)), ENC, xlabel="Rise Time [µs]", ylabel="ENC [e-]", title="ENC vs. RT", legend=:outertopright)
 
-
-i = 11
-enc_i = flatview(enc_trap_grid)[i,:]
