@@ -35,8 +35,10 @@ docs/site/
 # environment.
 # Manifest.toml
 
-# Ignore ASIC_data folder
+# Ignore ASIC_data folder and binary files in general
 ASIC_data/*
+*.csv
+*.h5
 
 # OS generated files
 **/.DS_Store
