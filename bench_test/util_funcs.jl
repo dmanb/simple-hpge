@@ -204,8 +204,9 @@ function simple_dsp(wvfs, decays)
     
     # deconvolute waveform 
     # --> wvfs = wvfs_pz
-    deconv_flt = InvCRFilter(decays[1])
-    wvfs = deconv_flt.(wvfs)
+    deconv_flt = InvCRFilter.(decays)
+
+    wvfs = [deconv_flt[i](wvfs[i]) for i in eachindex(wvfs)]
     
     # get tail mean, std and slope
     pz_stats = signalstats.(wvfs, leftendpoint(tail_window), rightendpoint(tail_window))
