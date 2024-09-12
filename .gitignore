@@ -44,6 +44,7 @@ docs/site/
 ASIC_data/*
 *.csv
 *.h5
+**/results/**/*.json 
 
 # OS generated files
 **/.DS_Store
