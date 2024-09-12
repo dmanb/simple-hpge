@@ -36,7 +36,7 @@ function read_wvfs_h5(filename::String; folder::String = "", nwvfs::Int = NaN)
     fopen = h5open(fname,"r")
     nwvfs = ifelse(isnan(nwvfs), length(keys(fopen)), nwvfs)
     voltages = [read(fopen[w])[2,:] for w in keys(fopen)[1:nwvfs]]
-    times_abs = [uconvert.(u"µs", read(fopen[w])[1,:]*u"s") for w in keys(fopen)[1:nwvfs]]
+    times_abs = [uconvert.(u"µs", read(fopen[w])[1,:]*u"µs") for w in keys(fopen)[1:nwvfs]]#[uconvert.(u"µs", read(fopen[w])[1,:]*u"µs") for w in keys(fopen)[1:nwvfs]]
     timesteps = [t[2] - t[1] for t in times_abs]
     times = [0u"µs":timesteps[i]:(length(voltages[i]) - 1)*timesteps[i] for i in eachindex(voltages)] 
     ArrayOfRDWaveforms((times, voltages))

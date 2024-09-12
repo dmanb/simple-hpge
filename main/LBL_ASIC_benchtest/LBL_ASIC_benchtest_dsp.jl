@@ -3,20 +3,20 @@ Pkg.activate("$(@__DIR__)/../../")
 using Unitful
 using LegendDSP
 using LegendDataManagement
-using LegendDataManagement: readlprops
+using LegendDataManagement: readlprops, writelprops
 using LegendDSP: get_fltpars
 using RadiationDetectorDSP
 using IntervalSets, TypedTables, StatsBase, PropDicts
 using Measures 
 using Statistics
-
 using Plots
-include("$(@__DIR__)/../utils_IO.jl")
-include("$(@__DIR__)/../simple_dsp.jl")
+include("$(@__DIR__)/../../utils/utils_IO.jl")
+include("$(@__DIR__)/../../src/simple_dsp.jl")
 
 # get dsp configuration
-dsp_config_path = "$(@__DIR__)/../../config/dsp_config.json"
-dsp_config = DSPConfig(readlprops(dsp_config_path).default)
+dpath = "$(@__DIR__)/data_config.json"
+pd_data = readlprops(dpath)
+dsp_config = DSPConfig(readlprops("$(@__DIR__)" * pd_data.configfolder * "dsp_config.json").default)
 
 # some plotting defaults 
 default(size=(600, 400), legend = :best, grid=:off, frame=:semi,
@@ -26,11 +26,19 @@ default(size=(600, 400), legend = :best, grid=:off, frame=:semi,
          legendforegroundcolor = :silver)
 
 # read data 
-folder = "ASIC_data_07312024/ASIC_PulserVoltage_0p500V/"
-wvfs = read_folder_csv(folder; heading = 2)
+wvfs = read_folder_csv(pd_data.datafolder; heading = 2)
 
 # dsp: this does: baseline shift, pole-zero correction, t0 determination, energy filters,....
 dsp_par = simple_dsp(wvfs, dsp_config)
+
+# create a PropDict save results as json file
+dsp_path = "$(@__DIR__)" * pd_data.dspfolder
+if !ispath(dsp_path)
+    mkpath(dsp_path)
+end
+dsp_pd = PropDict(Dict(varname => getproperty(dsp_par, varname) for varname in columnnames(dsp_par)))
+writelprops(dsp_path * "dsp_pars.json", dsp_pd)
+dsp = readlprops(dsp_path * "dsp_pars.json") # test if reading is working
 
 #########  look at results #########
 vars = columnnames(dsp_par) # overview of variables in dsp_par

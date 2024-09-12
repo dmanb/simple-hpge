@@ -24,8 +24,8 @@ plotlyjs(size=(700, 500))
 # gr(size=(700, 500))
 
 # read datafolder and run name from global config
-data_pd = readprops("data_config.json")
-
+data_pd = readprops("$(@__DIR__)/../data_config.json")
+data_pd.datafolder
 datafolder = data_pd.datafolder
 raw_folder = joinpath(datafolder, data_pd.run, "raw")
 dsp_folder = mkpath(joinpath(datafolder, data_pd.run, "dsp_tst"))

@@ -1,5 +1,5 @@
 import Pkg
-Pkg.activate("$(@__DIR__)/../../")
+Pkg.activate("$(@__DIR__)/../")
 using Unitful
 using LegendDSP
 using RadiationDetectorDSP
@@ -7,10 +7,10 @@ using Statistics
 using LegendDataManagement
 using LegendDataManagement: readlprops
 using Plots
-include("$(@__DIR__)/../utils_IO.jl")
+include("$(@__DIR__)/../utils/utils_IO.jl")
 
-# load dsp configuration
-dsp_config_path = "$(@__DIR__)/../../config/dsp_config.json"
+# get dsp configuration
+dsp_config_path = "$(@__DIR__)/../config/dsp_config.json"
 dsp_config = DSPConfig(readlprops(dsp_config_path).default)
 
 # some plotting defaults 
