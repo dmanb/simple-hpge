@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.4"
+julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "290131e732fe4f0e3a8bae4525748b367b92db94"
+project_hash = "76bf6e1eae055b74d0174ece5813cda154c8c608"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "ae44a0c3d68a420d4ac0fa1f7e0c034ccecb6dc5"
@@ -381,7 +381,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.1+0"
+version = "1.1.0+0"
 
 [[deps.CompositionsBase]]
 git-tree-sha1 = "802bb88cd69dfd1509f6670416bd4434015693ad"
@@ -1761,9 +1761,9 @@ version = "0.2.9"
 
 [[deps.RadiationDetectorSignals]]
 deps = ["ArraysOfArrays", "ElasticArrays", "FillArrays", "IntervalSets", "RecipesBase", "StaticArrays", "StatsBase", "StructArrays", "Tables", "TypedTables", "Unitful", "UnsafeArrays"]
-git-tree-sha1 = "52db21944cfd043cddd5671f42a7f721eea2116b"
+git-tree-sha1 = "5132a15d9ab5c4abcffb3e5c72124a777168bcb3"
 uuid = "bf2c0563-65cf-5db2-a620-ceb7de82658c"
-version = "0.3.6"
+version = "0.3.7"
 
 [[deps.RadiationSpectra]]
 deps = ["DelimitedFiles", "DensityInterface", "Distributions", "EmpiricalDistributions", "IntervalSets", "LinearAlgebra", "NamedTupleTools", "Optim", "Random123", "RecipesBase", "Requires", "SpecialFunctions", "StaticArrays", "StaticUnivariatePolynomials", "Statistics", "StatsBase", "ValueShapes"]
