@@ -10,12 +10,13 @@ using IntervalSets, TypedTables, StatsBase, PropDicts
 using Measures 
 using Statistics
 using ArraysOfArrays
+using Plots
 include("$(@__DIR__)/../utils/utils_IO.jl")
 include("$(@__DIR__)/../src/simple_dsp.jl")
 
 # get dsp configuration
-dsp_config_path = "$(@__DIR__)/../config/dsp_config.json"
-dsp_config = DSPConfig(readlprops(dsp_config_path).default)
+config_path = "$(@__DIR__)/../config/"
+dsp_config = DSPConfig(readlprops(config_path * "dsp_config.json" ).default)
 
 # some plotting defaults 
 default(size=(600, 400), legend = :best, grid=:off, frame=:semi,
@@ -25,10 +26,8 @@ default(size=(600, 400), legend = :best, grid=:off, frame=:semi,
          legendforegroundcolor = :silver)
 
 # read data 
-filename = "GFET_detector_run_test-001.hdf5"
-wvfs = read_wvfs_h5(filename; nwvfs = 10)
-
+folder = "GFET detector runs/"
+filename = "GFET_detector_run_test.hdf5"
+wvfs = read_wvfs_h5(filename; folder = folder, nwvfs = 5)
 plot(wvfs.time, wvfs.signal, ylabel = "Volts (V)")
 
-# dsp: this does: baseline shift, pole-zero correction, t0 determination, energy filters,....
-# dsp_par = simple_dsp(wvfs, dsp_config)

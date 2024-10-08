@@ -66,11 +66,11 @@
         "e_grid_trap" : {
             "rt": {
                 "start": {
-                    "val": 2.0,
+                    "val": 1.0,
                     "unit": "µs"
                 },
                 "stop": {
-                    "val": 8.0,
+                    "val": 6.0,
                     "unit": "µs"
                 },
                 "step": {
@@ -176,11 +176,11 @@
             "trap":
                 {
                     "rt": {
-                        "val": 3.5,
+                        "val": 3.0,
                         "unit": "µs"
                     },
                     "ft": {
-                        "val": 2.5,
+                        "val": 0.2,
                         "unit": "µs"
                     }
                 },

@@ -1,0 +1,7 @@
+{
+    "datafolder": "", 
+    "configfolder": "/config/",
+    "dspfolder": "/results/dsp/",
+    "logfolder": "/log/",
+    "figurefolder": "/figures/"
+}

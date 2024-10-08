@@ -10,6 +10,7 @@ using IntervalSets, TypedTables, StatsBase, PropDicts
 using ArraysOfArrays
 using Measures 
 using Statistics
+using Plots
 include("$(@__DIR__)/../utils/utils_IO.jl")
 include("$(@__DIR__)/../src/simple_dsp.jl")
 
@@ -27,13 +28,14 @@ default(size=(600, 400), legend = :best, grid=:off, frame=:semi,
 # read data 
 folder = "ASIC_data_07312024/ASIC_PulserVoltage_0p500V/"
 wvfs = read_folder_csv(folder; heading = 2)
+plot(wvfs[1])
 
 # do dsp with default settings
 dsp_par = simple_dsp(wvfs, dsp_config)
 
 ## running the dsp_trap_rt_optimization function to get the ENC vs. shaping time plot
 trap_rt, trap_ft = get_fltpars(PropDict(),:trap, dsp_config) # default rise-time and flattop-time from config
-ft = 3.0*u"µs"#trap_ft #
+ft = trap_ft #
 enc_trap_grid = dsp_trap_rt_optimization(wvfs, dsp_config, median(dsp_par.tail_τ),; ft = ft)
 
 ENC = Vector{Float64}()

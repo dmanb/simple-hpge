@@ -1,0 +1,7 @@
+{
+    "datafolder": "/ASIC_L1k65n_benchtest_2024_10/statistic-test-100mV/", 
+    "configfolder": "/config/",
+    "dspfolder": "/results/dsp/",
+    "logfolder": "/log/",
+    "figurefolder": "/figures/"
+}

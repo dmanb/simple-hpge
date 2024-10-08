@@ -1,5 +1,5 @@
 {
-    "datafolder": "/ASIC_data_07312024/ASIC_PulserVoltage_0p500V/", 
+    "datafolder": "/ASIC_data_07312024/", 
     "configfolder": "/config/",
     "dspfolder": "/results/dsp/",
     "logfolder": "/log/",
