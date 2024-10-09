@@ -53,7 +53,7 @@ function read_folder_csv_oscilloscope(folder::String; heading::Int = 17, nwvfmax
 
     # Get MetaData and timestep 
     MetaData, timestep = read_csv_metadata(fnames[1], heading = heading, nChannels = nChannels)
-    data_ch1 = [df[!,  MetaData["Ch1"]["Channel"]] for df in data]
+    data_ch1 = [df[!,  MetaData["Ch1"]["Channel"]] for df in data if any(map(x-> occursin(MetaData["Ch1"]["Channel"],x), names(df)))]
 
     # make sure than vertical unit is always in Volts!
     if uparse(MetaData["Ch1"]["Vertical Units"]) != u"V"
@@ -61,7 +61,7 @@ function read_folder_csv_oscilloscope(folder::String; heading::Int = 17, nwvfmax
     end 
 
     if nChannels == 2
-        data_ch2 = [df[!, MetaData["Ch2"]["Channel"]] for df in data]
+        data_ch2 = [df[!, MetaData["Ch2"]["Channel"]] for df in data if any(map(x-> occursin(MetaData["Ch2"]["Channel"],x), names(df)))]
         if uparse(MetaData["Ch2"]["Vertical Units"]) != u"V"
             data_ch2 = [ustrip.(uconvert.(u"V", wvf .* uparse(MetaData["Ch2"]["Vertical Units"]))) for wvf in data_ch2]
         end 
@@ -70,6 +70,8 @@ function read_folder_csv_oscilloscope(folder::String; heading::Int = 17, nwvfmax
     times = fill(0u"µs":timestep:(length(data_ch1[1]) - 1)*timestep, length(data_ch1[1]))
     wvfs_ch1 = ArrayOfRDWaveforms([RDWaveform(time, wvfs) for (time, wvfs) in zip(times, data_ch1)])
 
+    @info "Reading $(length(wvfs_ch1)) waveforms from file"
+    
     if nChannels == 1
         return wvfs_ch1,  MetaData
     elseif nChannels ==2 

@@ -44,7 +44,7 @@ function benchtest_filename_plot(Cinj_fF::Int, Rf_MOhm::Int, PulserChargeInj_keV
     else
         fname = fname * @sprintf("_ChargeInj%dkeV", PulserChargeInj_keV)
     end
-    fname = fname * @sprintf("_Temp%03dK_", Temp_K) * ".png"
+    fname = fname * @sprintf("_Temp%03dK", Temp_K) * ".png"
     return fname
 end
 

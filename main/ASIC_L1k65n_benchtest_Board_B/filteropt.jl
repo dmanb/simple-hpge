@@ -1,3 +1,6 @@
+# trap filter:
+# flat-top time = "gap time"
+# shaping time/ rise time = averaging time
 import Pkg
 Pkg.activate("$(@__DIR__)/../../")
 using Unitful
@@ -27,10 +30,10 @@ default(size=(600, 400), legend = :best, grid=:off, frame=:semi,
          legendforegroundcolor = :silver)
 
 # settings 
-PulserChargeInj_keV =  2000 # pulser charge injected in keV
+PulserChargeInj_keV =  1000 # pulser charge injected in keV
 Cinj_fF = 500 # capacitance of the ASIC in femto Farrad 
 Rf_MOhm = 500 # feedback resistor in Mega Ohm
-Temp_K = 77 # temperature in Kelvin 
+Temp_K = 300 # temperature in Kelvin 
 
 # get dsp configuration
 dpath = "$(@__DIR__)/data_config.json"
@@ -40,6 +43,8 @@ dsp_config = DSPConfig(readlprops("$(@__DIR__)" * pd_data.configfolder * "dsp_co
 # read data 
 folder = benchtest_filename_raw(pd_data, Cinj_fF, Rf_MOhm, PulserChargeInj_keV, Temp_K) 
 wvfs, _ = read_folder_csv_oscilloscope(folder; heading = 17, nChannels = 1)
+# wvfs = wvfs[51:end]
+
 p1 = plot(wvfs[1].time, wvfs[1].signal, label = "Raw", 
     xlabel = "Time", ylabel = "Amplitude (a.u.)", linewidth = 2.5, color = :dodgerblue, legend = :right)
 
@@ -56,9 +61,10 @@ dsp_par = simple_dsp(wvfs, dsp_config)
 # get decay times 
 decay_times = dsp_decay_times(wvfs, dsp_config)
 
+
 ## running the dsp_trap_rt_optimization function to get the ENC vs. shaping time plot
-trap_rt, trap_ft = get_fltpars(PropDict(),:trap, dsp_config) # default rise-time and flattop-time from config
-grid_ft_trap = [0.2, 0.5, 1, 1.5, 2].*u"µs"
+trap_rt, trap_ft = get_fltpars(PropDict(), :trap, dsp_config) # default rise-time and flattop-time from config
+grid_ft_trap = [0.1, 0.2, 0.5, 1, 1.5, 2].*u"µs"
 ENC = NaN.*zeros(Float64, length(grid_ft_trap), length(dsp_config.e_grid_rt_trap))
 for (i, ft) in enumerate(grid_ft_trap)
     try
@@ -69,6 +75,7 @@ for (i, ft) in enumerate(grid_ft_trap)
     end
 end
 ENC[ENC .== 0] .= Inf # if ft > rt, ENC is not calculated and set to 0. remove for better visibility in plot
+ENC[isnan.(ENC)] .= Inf 
 ENC_eV = csa_voltage2charge.(Cinj_fF, ENC)
 
 # plot result: ENC graph 
@@ -86,7 +93,7 @@ p2 = heatmap(grid_rt_trap, ustrip.(grid_ft_trap), ENC_eV,
     bottom_margin = 5mm)
 
 # find minimum ENC value: flat top time:
-ENC_min,  ENC_idx = findmin(ENC)
+ENC_min,  ENC_idx = findmin(ENC_eV)
 
 p3 = plot(grid_rt_trap,  ENC_eV[ENC_idx[1],:], 
     xlabel="Shaping time (µs)", 
@@ -94,15 +101,19 @@ p3 = plot(grid_rt_trap,  ENC_eV[ENC_idx[1],:],
     ylabel= "\n ENC noise (eV)",
     label = "Flattop time = $(grid_ft_trap[ENC_idx[1]])", 
     legendtitle = "$(length(wvfs)) waveforms",
-    legend=:right, 
+    legend=:best, 
     yformatter = :plain)
 # vline!([ustrip(trap_rt)], label = "Def. shaping time = $trap_rt", color = :grey, linewidth = 2.5, linestyle = :dashdot)
+
+(csaname, board) = CSAname(pd_data)
 
 plot(p1, p2,p3,  layout = (3,1), size = (900, 1500), 
     right_margin = 15mm, 
     left_margin = 5mm,
     dpi = 300,
-    thickness_scaling = 1.3)
+    thickness_scaling = 1.3,
+    plot_title = "Bench test: $(csaname)-Board $(board) \n" * "C = $Cinj_fF fF, R = $Rf_MOhm MOhm, T = $Temp_K K, " * L"$Q_\textrm{inj}$" * " = $(PulserChargeInj_keV/1e3) MeV", 
+    plot_titlefontsize = 12)
 
 fpath = "$(@__DIR__)$(pd_data.figurefolder)$(pd_data.datafolder)"
 if !ispath(fpath)

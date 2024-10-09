@@ -39,7 +39,7 @@ default(size=(600, 400), legend = :best, grid=:off, frame=:semi,
 # waveforms are randomly drawn (without replacement) from the total number of waveforms
 nSamples = 5:1:length(dsp_par.e_trap)
 e_trap_eV =  csa_voltage2charge.(Cinj_fF, dsp_par.e_trap)
-stds = [ std(e_trap_eV[sample(1:length(e_trap_keV), i, replace=false)]) for i in nSamples]
+stds = [ std(e_trap_eV[sample(1:length(e_trap_eV), i, replace=false)]) for i in nSamples]
 
 p2 = plot(nSamples, stds, xlabel = "Number of waveforms", ylabel = "Amplitude σ (eV)", linewidth = 2, color = :dodgerblue, label = "")
 hline!([std(e_trap_eV)], label = @sprintf("All waveforms: σ = %.0f eV",std(e_trap_eV)), 
