@@ -19,6 +19,14 @@ using RadiationDetectorSignals
 #     time = 0u"µs":timestep:(length(asic_voltages) - 1)*timestep
 #     RDWaveform(time, asic_voltages)
 # end
+"""
+   remove waveforms that have inf or nan values
+"""
+function qc_wvfs(wvfs::ArrayOfRDWaveforms)
+    wvf_keep = [all(x-> isfinite(x), w.signal) for w in wvfs]
+    wvf_surv = length(wvf_keep)/length(wvfs)
+    return wvf_keep, wvf_surv
+end
 
 """
     read_csv_metadata(filepath::String; heading::Int = 17, nChannels::Int = 2)
@@ -37,22 +45,47 @@ function read_csv_metadata(filepath::String; heading::Int = 17, nChannels::Int =
         IdxKeep = map(x -> !ismissing(x), MetaData2_vals)
         MetaData["Ch2"] = Dict(zip(String.(MetaData2_lbls[IdxKeep]), String.(MetaData2_vals[IdxKeep])))
     end 
+    if !haskey(MetaData["Ch1"], "Channel")
+        MetaData["Ch1"]["Channel"] = MetaData["Ch1"]["TIME"]
+        if nChannels == 2 && !haskey(MetaData["Ch2"], "Channel")
+            MetaData["Ch2"]["Channel"] = MetaData["Ch2"]["TIME"]
+        end
+    end
     return MetaData, timestep 
 end
 
 
-function read_folder_csv_oscilloscope(folder::String; heading::Int = 17, nwvfmax::Union{Int, Float64} = NaN, nChannels::Int = 2)
+function read_folder_csv_oscilloscope(folder::String; heading::Int = 17, nwvfmax::Union{Int, Float64, Vector{Int64}} = NaN, nChannels::Int = 2)
     files = readdir(get(ENV, "ASIC_DATA",".") * folder)
     filter!(x -> occursin(".csv", x), files)
-    if !isnan(nwvfmax)
+
+    if length(nwvfmax) == 1 && !isnan.(nwvfmax)
         files = files[1:nwvfmax]
+    elseif length(nwvfmax) > 1
+        files = files[nwvfmax]
     end
 
     fnames = [get(ENV, "ASIC_DATA",".") * joinpath(folder, file) for file in files]
     data = [CSV.read(fname, DataFrame; delim=',', header = heading) for fname in fnames]
 
-    # Get MetaData and timestep 
+    # Get MetaData and timestep
     MetaData, timestep = read_csv_metadata(fnames[1], heading = heading, nChannels = nChannels)
+
+   # SOME BASIC DATA CLEANING:
+    MvIdx = .![any(map(x-> occursin(MetaData["Ch1"]["Channel"],x), names(df))) .&&  # good files need to have column named with a channel 
+            !any(ismissing.(df[!,  MetaData["Ch1"]["Channel"]])) .&& # no missing data points
+            all(isfinite.(df[!,  MetaData["Ch1"]["Channel"]])) for df in data] # no infinite or nan data points
+    if any(MvIdx)
+        @info "Moving $(sum(MvIdx)) waveforms to ignore folder because of: missing data points, infinite or nan data points, missing channel"
+        dst_folder = get(ENV, "ASIC_DATA",".") * folder * "ignore/"
+        if !ispath(dst_folder)
+        mkpath(dst_folder)
+        end
+        mv.(fnames[MvIdx], [joinpath(dst_folder, file) for file in files[MvIdx]])
+        fnames = fnames[.!MvIdx]
+        data = data[.!MvIdx]
+    end
+    # assign data to the right channel
     data_ch1 = [df[!,  MetaData["Ch1"]["Channel"]] for df in data if any(map(x-> occursin(MetaData["Ch1"]["Channel"],x), names(df)))]
 
     # make sure than vertical unit is always in Volts!
@@ -69,7 +102,6 @@ function read_folder_csv_oscilloscope(folder::String; heading::Int = 17, nwvfmax
 
     times = fill(0u"µs":timestep:(length(data_ch1[1]) - 1)*timestep, length(data_ch1[1]))
     wvfs_ch1 = ArrayOfRDWaveforms([RDWaveform(time, wvfs) for (time, wvfs) in zip(times, data_ch1)])
-
     @info "Reading $(length(wvfs_ch1)) waveforms from file"
     
     if nChannels == 1
@@ -82,18 +114,18 @@ end
 
 function read_file_csv_oscilloscope(filepath::String;  heading::Int = 17, nChannels::Int = 2)
     data = CSV.read(filepath, DataFrame; delim=',', header = heading)
-    MetaData, timestep = read_csv_metadata(fnames[1], heading = heading, nChannels = nChannels)
+    MetaData, timestep = read_csv_metadata(filepath, heading = heading, nChannels = nChannels)
     data_ch1 = data[!, MetaData["Ch1"]["Channel"]]
     # Get MetaData and timestep 
     if nChannels == 2
         data_ch2 = data[!, MetaData["Ch2"]["Channel"]]
     end 
-    time = fill(0u"µs":timestep:(length(data_ch1) - 1)*timestep, length(data_ch1))
-    wvfs_ch1 = RDWaveform(time, data_ch1) 
+    time = 0u"µs":timestep:(length(data_ch1) - 1)*timestep
+    wvfs_ch1 = ArrayOfRDWaveforms([RDWaveform(time, data_ch1)])
     if nChannels == 1
         return wvfs_ch1, MetaData
     elseif nChannels ==2 
-        wvfs_ch2 = RDWaveform(time, data_ch2) 
+        wvfs_ch2 = ArrayOfRDWaveforms([RDWaveform(time, data_ch2)])
         return wvfs_ch1, wvfs_ch2, MetaData
     end 
 end
@@ -139,3 +171,4 @@ function read_wvfs_h5(filename::String; folder::String = "", nwvfs::Union{Int, F
 
     return ArrayOfRDWaveforms((times, voltages)), metadata 
 end 
+

@@ -29,7 +29,7 @@ function simple_dsp(wvfs::ArrayOfRDWaveforms, dsp_config::DSPConfig)
     wvf_min = minimum.(wvfs.signal)
     
     # deconvolute waveform: pole-zero correction. Use mean decay time for all waveforms
-    deconv_flt = InvCRFilter(median(tail_stats.τ))
+    deconv_flt = InvCRFilter(median(filter!(isfinite,tail_stats.τ)))
     wvfs_pz = deconv_flt.(wvfs)#[deconv_flt[i](wvfs[i]) for i in eachindex(wvfs)]
   
     # get tail mean, std and slope
@@ -101,7 +101,6 @@ function simple_dsp(wvfs::ArrayOfRDWaveforms, dsp_config::DSPConfig)
     
     t50_current = get_threshold(wvfs_sgflt_deriv, thres; mintot=dsp_config.kwargs_pars.tx_mintot)
     
-
     # output Table 
     # return 
     Table(blmean = bl_stats.mean, blsigma = bl_stats.sigma, blslope = bl_stats.slope, bloffset = bl_stats.offset, 
@@ -117,3 +116,64 @@ function simple_dsp(wvfs::ArrayOfRDWaveforms, dsp_config::DSPConfig)
         a_sg = a_sg, a_60 = a_60, a_100 = a_100, a_raw = a_raw,
         )
 end 
+
+"""
+minimal dsp to calculate quality cuts 
+"""
+function simple_dsp_qc(wvfs::ArrayOfRDWaveforms, dsp_config::DSPConfig)
+    #### all filter parameters set to default since we do not have access to full library 
+    trap_rt, trap_ft = get_fltpars(PropDict(),:trap, dsp_config)
+
+    ################## ACTUAL WAVEFORM FILTERING AND RECONSTRUCTION, ANALYSIS BEGINS HERE ##################
+    bl_stats = signalstats.(wvfs, leftendpoint(dsp_config.bl_window), rightendpoint(dsp_config.bl_window))
+
+    # substract baseline from waveforms
+    wvfs = shift_waveform.(wvfs, -bl_stats.mean)
+   
+    # tail analysis 
+    tail_stats = tailstats.(wvfs, leftendpoint(dsp_config.tail_window), rightendpoint(dsp_config.tail_window))
+
+    # get raw wvf maximum/minimum
+    wvf_max = maximum.(wvfs.signal)
+    wvf_min = minimum.(wvfs.signal)
+    
+    # deconvolute waveform: pole-zero correction. Use mean decay time for all waveforms
+    deconv_flt = InvCRFilter(median(filter!(isfinite,tail_stats.τ)))
+    wvfs_pz = deconv_flt.(wvfs)#[deconv_flt[i](wvfs[i]) for i in eachindex(wvfs)]
+  
+    # get tail mean, std and slope
+    pz_stats = signalstats.(wvfs_pz, leftendpoint(dsp_config.tail_window), rightendpoint(dsp_config.tail_window))
+
+    # t0 determination
+    t0 = get_t0(wvfs_pz, dsp_config.t0_threshold; flt_pars=dsp_config.kwargs_pars.t0_flt_pars, mintot=dsp_config.kwargs_pars.t0_mintot)
+    
+    # if all waveforms are saturated set threshold to 1.0 to avoid numerical problems
+    # replace!(wvf_max, zero(wvf_max[1]) => one(wvf_max[1]))
+    
+    # get threshold points in rise
+    t10 = get_threshold(wvfs, wvf_max .* 0.1; mintot=dsp_config.kwargs_pars.tx_mintot)
+    t50 = get_threshold(wvfs, wvf_max .* 0.5; mintot=dsp_config.kwargs_pars.tx_mintot)
+    t80 = get_threshold(wvfs, wvf_max .* 0.8; mintot=dsp_config.kwargs_pars.tx_mintot)
+    t90 = get_threshold(wvfs, wvf_max .* 0.9; mintot=dsp_config.kwargs_pars.tx_mintot)
+    t99 = get_threshold(wvfs, wvf_max .* 0.99; mintot=dsp_config.kwargs_pars.tx_mintot)
+        
+    drift_time = uconvert.(u"ns", t90 - t0)
+    
+      # signal estimator for precise energy reconstruction
+    signal_estimator = SignalEstimator(PolynomialDNI(dsp_config.kwargs_pars.sig_interpolation_order, dsp_config.kwargs_pars.sig_interpolation_length))
+    
+    # get trap energy of optimized rise and flat-top time
+    uflt_trap_rtft = TrapezoidalChargeFilter(trap_rt, trap_ft)
+    e_trap = signal_estimator.(uflt_trap_rtft.(wvfs), t50 .+ (trap_rt + trap_ft/2))
+      
+    # output Table 
+    # return 
+    Table(blmean = bl_stats.mean, blsigma = bl_stats.sigma, blslope = bl_stats.slope, bloffset = bl_stats.offset, 
+        tailmean = pz_stats.mean, tailsigma = pz_stats.sigma, tailslope = pz_stats.slope, tailoffset = pz_stats.offset,
+        t0 = t0, t10 = t10, t50 = t50, t80 = t80, t90 = t90, t99 = t99,
+        drift_time = drift_time,
+        tail_τ = tail_stats.τ, tail_mean = tail_stats.mean, tail_sigma = tail_stats.sigma,
+        e_max = wvf_max, e_min = wvf_min,
+        e_trap = e_trap)   
+end 
+

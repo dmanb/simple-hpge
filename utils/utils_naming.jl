@@ -1,18 +1,22 @@
 
 
-function benchtest_filename_dsp(Cinj_fF::Int, Rf_MOhm::Int, PulserChargeInj_keV::Union{Int, Float64}, Temp_K::Int)
+function benchtest_filename_dsp(Cinj_fF::Int, Rf_MOhm::Int, PulserChargeInj::Union{Int, Float64}, Temp_K::Int;  PulserChargeInj_Mode::String = "keV")
     dsp_file =  @sprintf("DSPpar_Cinj%04dfF_Rf%3dM", Cinj_fF, Rf_MOhm)
-    if PulserChargeInj_keV >= 1000
-        PulserChargeInj_MeV = PulserChargeInj_keV / 1000
-        if isinteger(PulserChargeInj_MeV)
-            dsp_file = dsp_file * @sprintf("_ChargeInj%dMeV", PulserChargeInj_MeV)
+    if PulserChargeInj_Mode == "keV"
+        if PulserChargeInj >= 1000
+            PulserChargeInj_MeV = PulserChargeInj / 1000
+            if isinteger(PulserChargeInj_MeV)
+                dsp_file = dsp_file * @sprintf("_ChargeInj%dMeV", PulserChargeInj_MeV)
+            else 
+                dsp_file = dsp_file *  @sprintf("_ChargeInj%.1fMeV", PulserChargeInj_MeV) |> x -> replace(x, "." => "p")
+            end
         else 
-            dsp_file = dsp_file *  @sprintf("_ChargeInj%.1fMeV", PulserChargeInj_MeV) |> x -> replace(x, "." => "p")
-        end
-    else 
-        dsp_file = dsp_file * @sprintf("_ChargeInj%dkeV", PulserChargeInj_keV)
-    end 
-    dsp_file = dsp_file * @sprintf("_Temp%03dK_", Temp_K) * ".json"
+            dsp_file = dsp_file * @sprintf("_ChargeInj%dkeV", PulserChargeInj)
+        end 
+    elseif PulserChargeInj_Mode == "mV"
+        dsp_file = dsp_file * @sprintf("_ChargeInj%dmV", PulserChargeInj)
+    end
+    dsp_file = dsp_file * @sprintf("_Temp%03dK", Temp_K) * ".json"
     return dsp_file
 end
 
@@ -32,17 +36,23 @@ function benchtest_filename_raw(pd_data, Cinj_fF::Int, Rf_MOhm::Int, PulserCharg
     return datafolder
 end
 
-function benchtest_filename_plot(Cinj_fF::Int, Rf_MOhm::Int, PulserChargeInj_keV::Union{Int, Float64}, Temp_K::Int)
+function noise_dataset_str(Cinj_fF::Int, Temp_K::Int, AmpFac::Int)
+    return @sprintf("NOISE_Cinj%3dfF_%2dK_AmpFac%1d", Cinj_fF, Temp_K, AmpFac)  
+end
+
+function benchtest_filename_plot(Cinj_fF::Int, Rf_MOhm::Int, PulserChargeInj::Union{Int, Float64}, Temp_K::Int; PulserChargeInj_Mode::String = "keV")
     fname =  @sprintf("Cinj%04dfF_Rf%3dM", Cinj_fF, Rf_MOhm)
-    if PulserChargeInj_keV >= 1000
-        PulserChargeInj_MeV = PulserChargeInj_keV / 1000
-        if isinteger(PulserChargeInj_MeV)
-            fname = fname * @sprintf("_ChargeInj%dMeV", PulserChargeInj_MeV)
-        else 
-            fname = fname *  @sprintf("_ChargeInj%.1fMeV", PulserChargeInj_MeV) |> x -> replace(x, "." => "p")
+    if PulserChargeInj_Mode == "keV"
+        if PulserChargeInj >= 1000
+            PulserChargeInj_MeV = PulserChargeInj / 1000
+            if isinteger(PulserChargeInj_MeV)
+                fname = fname * @sprintf("_ChargeInj%dMeV", PulserChargeInj_MeV)
+            else 
+                fname = fname *  @sprintf("_ChargeInj%.1fMeV", PulserChargeInj_MeV) |> x -> replace(x, "." => "p")
+            end
+        elseif PulserChargeInj_Mode == "mV"
+            fname = fname * @sprintf("_ChargeInj%dmV", PulserChargeInj)
         end
-    else
-        fname = fname * @sprintf("_ChargeInj%dkeV", PulserChargeInj_keV)
     end
     fname = fname * @sprintf("_Temp%03dK", Temp_K) * ".png"
     return fname
@@ -58,4 +68,8 @@ function CSAname(pd_data)
     csaname = pd_data.datafolder[1:findfirst("_CSA",pd_data.datafolder)[1]-1]
     board = string(pd_data.datafolder[findfirst("Board_",pd_data.datafolder)[end]+1])
     return csaname, board
+end
+
+function detector_filename_dsp(pd_data::PropDict)
+   
 end

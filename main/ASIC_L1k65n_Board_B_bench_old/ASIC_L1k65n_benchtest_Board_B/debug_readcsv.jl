@@ -37,6 +37,19 @@ end
 fnames = [get(ENV, "ASIC_DATA",".") * joinpath(folder, file) for file in files]
 data = [CSV.read(fname, DataFrame; delim=',', header = heading) for fname in fnames]
 
+KeepIdx1 = [any(map(x-> occursin(MetaData["Ch1"]["Channel"],x), names(df)))  for df in data]
+fnames = fnames[KeepIdx1]
+data = data[KeepIdx1]
+if !all(KeepIdx1)
+    @info "Skipping waveforms with incorrect format: $(findall(.!KeepIdx1))"
+end
+KeepIdx2 = [!any(ismissing.(data[i][!,  MetaData["Ch1"]["Channel"]])) for i in eachindex(data)]
+if !all(KeepIdx2)
+    @info "Skipping waveforms with missing data: $(findall(.!KeepIdx2))"
+end
+fnames = fnames[KeepIdx2]
+data = data[KeepIdx2]
+
 # Get MetaData and timestep 
 nChannels = 2
 MetaData, timestep = read_csv_metadata(fnames[1], heading = heading, nChannels = nChannels)

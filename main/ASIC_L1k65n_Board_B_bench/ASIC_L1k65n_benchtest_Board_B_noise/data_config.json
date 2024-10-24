@@ -1,0 +1,8 @@
+{
+    "datafolder": "L1k65n_CSA_DATA_Board_B/Board_B_Bench_Noise/", 
+    "configfolder": "/config/",
+    "dspfolder": "/results/dsp/",
+    "noisefolder": "/results/noise/",
+    "logfolder": "/log/",
+    "figurefolder": "/figures/"
+}

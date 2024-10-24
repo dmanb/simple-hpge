@@ -1,0 +1,9 @@
+{
+    "datafolder": "L1k65n_CSA_DATA_Board_A/Board_A_2nd_Run_Detector/sept27samebut10k/", 
+    "configfolder": "/config/",
+    "dspfolder": "/results/dsp/",
+    "logfolder": "/log/",
+    "figurefolder": "/figures/",
+    "qcfolder": "/qc/"
+}
+

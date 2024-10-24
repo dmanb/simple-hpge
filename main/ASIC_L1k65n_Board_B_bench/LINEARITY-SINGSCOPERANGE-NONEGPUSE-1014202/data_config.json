@@ -1,0 +1,7 @@
+{
+    "datafolder": "L1k65n_CSA_DATA_Board_B/LINEARITY-SINGSCOPERANGE-NONEGPUSE-10142024/", 
+    "configfolder": "/config/",
+    "dspfolder": "/results/dsp/",
+    "logfolder": "/log/",
+    "figurefolder": "/figures/"
+}

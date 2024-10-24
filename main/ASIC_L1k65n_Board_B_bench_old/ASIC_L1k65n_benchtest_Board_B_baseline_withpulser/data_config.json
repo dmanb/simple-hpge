@@ -1,0 +1,7 @@
+{
+    "datafolder": "L1k65n_CSA_DATA_Board_B/Board_B_Bench_Noise/Baseline_Noise_Cinj500fF_C0G_Rf500M_Pulser/", 
+    "configfolder": "/config/",
+    "dspfolder": "/results/dsp/",
+    "logfolder": "/log/",
+    "figurefolder": "/figures/"
+}

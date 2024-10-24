@@ -1,0 +1,23 @@
+{"3000fF": {
+        "bl_window": {
+            "min": {
+                "val": 0.0,
+                "unit": "µs"
+            }, 
+            "max": {
+                "val": 130.0,
+                "unit": "µs"
+            }
+        },
+        "tail_window": {
+            "min": {
+                "val": 180.0,
+                "unit": "µs"
+            }, 
+            "max": {
+                "val": 550.0,
+                "unit": "µs"
+            }
+        }
+    }
+}

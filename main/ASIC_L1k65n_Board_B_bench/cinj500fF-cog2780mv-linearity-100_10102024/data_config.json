@@ -1,0 +1,7 @@
+{
+    "datafolder": "L1k65n_CSA_DATA_Board_B/cinj500fF-cog2780mv-linearity-100_10102024/", 
+    "configfolder": "/config/",
+    "dspfolder": "/results/dsp/",
+    "logfolder": "/log/",
+    "figurefolder": "/figures/"
+}
